@@ -4,4 +4,5 @@
 pip3 instasll requirements.txt
 ## 训练步骤
 1.python3 new_token.py
+
 2.python3 train.py
