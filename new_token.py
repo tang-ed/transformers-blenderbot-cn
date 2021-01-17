@@ -13,7 +13,7 @@ ans = []
 start_token = "<start>"
 end_token = "<end>"
 
-with open(cfg.data_path) as f:
+with open(cfg.data_file) as f:
     data = f.read().split("\n")
 
     state = None
