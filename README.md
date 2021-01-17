@@ -7,6 +7,9 @@ pip3 install requirements.txt
 
 2.python3 train.py
 
+## 注意：
+非训练是将config.json中的use_cache改为true
+
 #transformers库的链接
 
 https://huggingface.co/transformers/
