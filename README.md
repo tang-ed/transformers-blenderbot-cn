@@ -7,6 +7,9 @@ pip3 install requirements.txt
 
 2.python3 train.py
 
+## 使用官方预训练模型训练
+python3 pre_train.py
+
 ## 注意：
 非训练是将config.json中的use_cache改为true
 
