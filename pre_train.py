@@ -86,7 +86,7 @@ def models():
     de_out = keras.layers.Input(shape=[out_shape], dtype="int64")
     inp_mask = keras.layers.Input(shape=[inp_shape], dtype="int32")
     out_mask = keras.layers.Input(shape=[out_shape], dtype="int32")
-    out = blen_model(input_ids=inp, decoder_input_ids=de_out, attention_mask=inp_mask, decoder_attention_mask=out_mask, training=True)[0]
+    out = blen_model(input_ids=inp, decoder_input_ids=de_out, attention_mask=inp_mask, decoder_attention_mask=out_mask, training=True, use_cache=False)[0]
     return keras.models.Model(inputs=[inp, de_out, inp_mask, out_mask], outputs=out)
 
 
