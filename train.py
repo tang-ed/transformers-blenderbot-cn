@@ -80,7 +80,7 @@ def train():
     print("总步数：", total_steps)
     natural_exp_decay = NaturalExpDecay(initial_learning_rate=cfg.lr_rate,
                                         decay_steps=total_steps,
-                                        decay_rate=1e-7)
+                                        decay_rate=1e-5)
 
     optimizer = keras.optimizers.Adam(natural_exp_decay)
     model = models()

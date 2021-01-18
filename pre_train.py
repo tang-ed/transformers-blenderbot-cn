@@ -57,6 +57,8 @@ output_mask = outps["attention_mask"]
 
 inp_shape = input_ids.shape[1]
 out_shape = output_ids.shape[1]
+print(input_ids.shape[0])
+exit()
 
 
 class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):

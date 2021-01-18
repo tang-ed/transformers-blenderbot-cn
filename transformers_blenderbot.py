@@ -912,8 +912,7 @@ class TFBlenderbotSmallModel(TFBlenderbotSmallPreTrainedModel):
 
     def __init__(self, config: BlenderbotSmallConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
-        # print("config--------",config.vocab_size, config.d_model, config.pad_token_id)
-        self.shared = TFSharedEmbeddings(config.vocab_size, config.d_model,  name="model.shared")
+        self.shared = TFSharedEmbeddings(config.vocab_size, config.d_model,  config.init_std,  name="model.shared")
 
         with tf.compat.v1.variable_scope("model.shared") as shared_abs_scope_name:
             pass
@@ -1169,11 +1168,8 @@ class TFBlenderbotSmallForConditionalGeneration(TFBlenderbotSmallPreTrainedModel
             return_dict=inputs["return_dict"],
             training=inputs["training"],
         )
-        # print("out", outputs[0])
         lm_logits = self.model.shared(outputs[0], mode="linear")
-        # print("logits1:  ", lm_logits)
         lm_logits = lm_logits + self.final_logits_bias
-        # print("logits2:  ", lm_logits)
         masked_lm_loss = None if inputs["labels"] is None else self.compute_loss(inputs["labels"], lm_logits)
 
         if not inputs["return_dict"]:
