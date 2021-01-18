@@ -11,6 +11,6 @@ cfg                           = __C
 
 __C.data_file = "./data/cn_train.txt" # 原文
 __C.data_file_v2 = "./data/cn_train_v2.txt" # 原文
-__C.batch_size = 4
-__C.epoch = 10
+__C.batch_size = 8 # 用预训练模型进行训练时建议是8或者4，不用预训练模型训练建议是16或者32
+__C.epoch = 100
 __C.lr_rate = 1e-3

@@ -1,5 +1,4 @@
 from transformers import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallTokenizer
-import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from config_ import cfg
@@ -14,6 +13,7 @@ que = []
 ans = []
 start_token = "__start__"
 end_token = "__end__"
+
 
 with open(cfg.data_file_v2) as f:
     data = f.read().split("\n")
@@ -56,6 +56,22 @@ output_mask = outps["attention_mask"]
 
 inp_shape = input_ids.shape[1]
 out_shape = output_ids.shape[1] - 1
+
+
+class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """学习率自然数衰减"""
+    def __init__(self, initial_learning_rate, decay_steps, decay_rate):
+        super().__init__()
+        self.initial_learning_rate = tf.cast(initial_learning_rate, dtype=tf.float32)
+        self.decay_steps = tf.cast(decay_steps, dtype=tf.float32)
+        self.decay_rate = tf.cast(decay_rate, dtype=tf.float32)
+
+    def __call__(self, step):
+        return self.initial_learning_rate * tf.math.exp(-self.decay_rate * (step / self.decay_steps))
+
+
+
+
 
 def shape_list(tensor: tf.Tensor) -> List[int]:
 
@@ -102,9 +118,12 @@ def train():
 
     total_steps = inps["input_ids"].shape[0] // cfg.batch_size * cfg.epoch
     print("总步数：", total_steps)
-    cosine_decay = keras.experimental.CosineDecay(
-        initial_learning_rate=cfg.lr_rate, decay_steps=total_steps)
-    optimizer = keras.optimizers.Adam(cosine_decay)
+
+    natural_exp_decay = NaturalExpDecay(initial_learning_rate=cfg.lr_rate,
+                                        decay_steps=total_steps,
+                                        decay_rate=1e-7)
+
+    optimizer = keras.optimizers.Adam(natural_exp_decay)
     model = models()
     model.compile(optimizer=optimizer, loss=compute_loss, metrics=["accuracy"])
     model.summary()
