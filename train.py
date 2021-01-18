@@ -19,7 +19,7 @@ output_mask = npzfile['arr_3']
 
 
 inp_shape = input_ids.shape[1]
-out_shape = output_ids.shape[1] - 1
+out_shape = output_ids.shape[1]
 
 
 class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -70,10 +70,10 @@ def train():
 
     train_dataset = tf.data.Dataset.from_tensor_slices(({
                                                             'input_1': input_ids,
-                                                            'input_2': output_ids[:, :-1],
+                                                            'input_2': output_ids,
                                                             'input_3': input_mask,
-                                                            'input_4': output_mask[:, :-1],
-                                                        }, output_ids[:, 1:]))
+                                                            'input_4': output_mask,
+                                                        }, output_ids))
     train_dataset = train_dataset.shuffle(1000).batch(cfg.batch_size)
 
     total_steps = input_ids.shape[0] // cfg.batch_size * cfg.epoch

@@ -28,16 +28,16 @@ with open(cfg.data_file_v2) as f:
                 if q is None:
                     q = data[i]
                     a = data[i+1]
-                    que.append(start_token + " " + q + " " + end_token)
-                    ans.append(start_token + " " + a + " " + end_token)
+                    que.append(q)
+                    ans.append(start_token + " " + a)
                     state = q+" | " + a
                     continue
                 if state is not None:
                     q = state
                     a = data[i + 1]
                     state = q + " | " + a
-                    que.append(start_token + " " + q + " " + end_token)
-                    ans.append(start_token + " " + a + " " + end_token)
+                    que.append(q)
+                    ans.append(start_token + " " + a)
 
             else:
                 continue
@@ -50,12 +50,13 @@ inps = tokenizer(que, return_tensors="tf", padding=True, truncation=True)
 outps = tokenizer(ans, return_tensors="tf", padding=True, truncation=True)
 
 input_ids = inps["input_ids"]
+
 input_mask = inps["attention_mask"]
 output_ids = outps["input_ids"]
 output_mask = outps["attention_mask"]
 
 inp_shape = input_ids.shape[1]
-out_shape = output_ids.shape[1] - 1
+out_shape = output_ids.shape[1]
 
 
 class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -110,10 +111,10 @@ def train():
 
     train_dataset = tf.data.Dataset.from_tensor_slices(({
                                                             'input_1': input_ids,
-                                                            'input_2': output_ids[:, :-1],
+                                                            'input_2': output_ids,
                                                             'input_3': input_mask,
-                                                            'input_4': output_mask[:, :-1],
-                                                        },  output_ids[:, 1:]))
+                                                            'input_4': output_mask,
+                                                        },  output_ids))
     train_dataset = train_dataset.shuffle(1000).batch(cfg.batch_size)
 
     total_steps = inps["input_ids"].shape[0] // cfg.batch_size * cfg.epoch

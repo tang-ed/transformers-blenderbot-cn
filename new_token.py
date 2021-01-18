@@ -20,10 +20,11 @@ with open(cfg.data_file) as f:
     a = None
 
     for i in range(len(data)):
-        if data[i] != "  " and data[i] != " ":
-            if data[i + 1] != "  " and data[i+1] != " ":
+        if data[i] != " " and data[i] != "":
+            if data[i + 1] != "" and data[i+1] != " ":
                 if q is None:
                     q = data[i]
+
                     a = data[i+1]
                     que.append(start_token + " " + q + " " + end_token)
                     ans.append(start_token + " " + a + " " + end_token)
@@ -45,10 +46,20 @@ with open(cfg.data_file) as f:
 
 token.fit_on_texts(que+ans)
 vocab_size = len(token.word_index) + 1
-print(vocab_size)
+
+token.word_index["。"] = 100000
+token.word_index["<start>"] = 1
+token.word_index["<end>"] = 2
+token.word_index["|"] = 3
+token.word_index["。"] = 5
 
 que = token.texts_to_sequences(que)
+
+que = [i[1:-1] for i in que]
 ans = token.texts_to_sequences(ans)
+ans = [n[:-1] for n in ans]
+
+
 que = pad_sequences(que, padding="post")
 ans = pad_sequences(ans, padding="post")
 
@@ -67,5 +78,5 @@ with open("config.json", "w") as f:
 
 
 np.savez("cn_train_data", que, que_mask, ans, ans_mask)
-#
+
 print("保存完成")
