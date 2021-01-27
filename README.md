@@ -19,4 +19,4 @@ python3 pre_train.py
 
 https://huggingface.co/transformers/
 
-# 两个数据样本进行了30个epoch的训练，测试图在image文件中。loss最终下降到了0.04左右。
+# 两千个数据样本进行了30个epoch的训练，测试图在image文件中。loss最终下降到了0.04左右。
