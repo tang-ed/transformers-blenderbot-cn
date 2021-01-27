@@ -11,16 +11,16 @@
     "bos_token_id": 1,
     "classif_dropout": 0.0,
     "classifier_dropout": 0.0,
-    "d_model": 1024,
+    "d_model": 512,
     "decoder_attention_heads": 8,
-    "decoder_ffn_dim": 2048,
+    "decoder_ffn_dim": 1024,
     "decoder_layerdrop": 0.0,
     "decoder_layers": 6,
     "decoder_start_token_id": 1,
     "do_blenderbot_90_layernorm": true,
     "dropout": 0.1,
     "encoder_attention_heads": 8,
-    "encoder_ffn_dim": 2048,
+    "encoder_ffn_dim": 1024,
     "encoder_layerdrop": 0.0,
     "encoder_layers": 6,
     "eos_token_id": 2,
@@ -56,5 +56,5 @@
     "transformers_version": "4.2.0dev0",
     "unk_token_id": 3,
     "use_cache": false,
-    "vocab_size": 3731
+    "vocab_size": 7788
 }
