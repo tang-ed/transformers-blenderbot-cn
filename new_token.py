@@ -1,19 +1,19 @@
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from transformers import BlenderbotSmallTokenizer
 import numpy as np
-import json
 from config_ import cfg
 
 
-token = Tokenizer(filters='!"#$%&()*+,-./:;=?@[\\]^_`{}~\t\n',)
+token = BlenderbotSmallTokenizer(vocab_file="vocab.json", merges_file="merges.txt")
 
 que = []
 ans = []
-start_token = "<start>"
-end_token = "<end>"
+start_token = token.bos_token
+end_token = token.eos_token
+
 
 with open(cfg.data_file) as f:
     data = f.read().split("\n")
+
 
     state = None
     q = None
@@ -24,18 +24,19 @@ with open(cfg.data_file) as f:
             if data[i + 1] != "" and data[i+1] != " ":
                 if q is None:
                     q = data[i]
-
                     a = data[i+1]
-                    que.append(start_token + " " + q + " " + end_token)
-                    ans.append(start_token + " " + a + " " + end_token)
+                    que.append(q)
+                    ans.append(a)
+
                     state = q+" | " + a
                     continue
                 if state is not None:
                     q = state
                     a = data[i + 1]
                     state = q + " | " + a
-                    que.append(start_token + " " + q + " " + end_token)
-                    ans.append(start_token + " " + a + " " + end_token)
+                    que.append(q)
+                    ans.append(a)
+
 
             else:
                 continue
@@ -44,39 +45,23 @@ with open(cfg.data_file) as f:
             q = None
             a = None
 
-token.fit_on_texts(que+ans)
-vocab_size = len(token.word_index) + 1
+que_data = token(que, return_tensors="tf", padding=True, truncation=True)
+ans_data = token(ans, return_tensors="tf", padding=True, truncation=True, max_length=126)
+ans_datas = ans_data["input_ids"]
+# print(ans_datas)
 
-token.word_index["。"] = 100000
-token.word_index["<start>"] = 1
-token.word_index["<end>"] = 2
-token.word_index["|"] = 3
-token.word_index["。"] = 5
+new_ans = []
+for i in ans_datas:
+    ans_ls = list(i.numpy())
+    ans_ls.insert(0, 1)
+    try:
+        z_index = ans_ls.index(0)
+        ans_ls.insert(z_index, 2)
+    except:
+        ans_ls.insert(-1, 2)
+    new_ans.append(ans_ls)
 
-que = token.texts_to_sequences(que)
-
-que = [i[1:-1] for i in que]
-ans = token.texts_to_sequences(ans)
-ans = [n[:-1] for n in ans]
-
-
-que = pad_sequences(que, padding="post")
-ans = pad_sequences(ans, padding="post")
-
-que_mask = np.array(que > 0, dtype="int32")
-ans_mask = np.array(ans > 0, dtype="int32")
-
-with open("vocab.json", "w") as f:
-    json.dump(token.word_index, f, ensure_ascii=False, indent=4)
-
-with open("config.json" , "r") as f:
-    data = json.load(f)
-
-data["vocab_size"] = vocab_size
-with open("config.json", "w") as f:
-    json.dump(data, f, ensure_ascii=False, indent=4)
-
-
-np.savez("cn_train_data", que, que_mask, ans, ans_mask)
-
-print("保存完成")
+ans_data = np.array(new_ans)
+print(ans_data.shape)
+np.savez("train_data", que_data["input_ids"], ans_data)
+print("完成")
