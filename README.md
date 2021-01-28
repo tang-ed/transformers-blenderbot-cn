@@ -3,7 +3,7 @@
 ## 安装支持库
 pip3 install -r requirements.txt
 ## 训练步骤
-1.python3 new_token.py
+1.python3 new_token.py (注意，merges文件件是空的，自己新建一个就行了)
 
 2.python3 train.py
 
