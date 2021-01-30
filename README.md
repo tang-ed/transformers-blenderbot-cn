@@ -19,4 +19,7 @@ python3 pre_train.py
 
 https://huggingface.co/transformers/
 
+# transformers-blenderbot模型源码
+https://huggingface.co/transformers/_modules/transformers/models/blenderbot_small/modeling_tf_blenderbot_small.html#TFBlenderbotSmallModel
+
 # 两千个数据样本进行了30个epoch的训练，测试图在image文件中。loss最终下降到了0.04左右。
