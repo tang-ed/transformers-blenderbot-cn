@@ -1,7 +1,6 @@
 from tokenizer import SelfTokenizer
 from BlenderbotSmall import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallConfig
 import tensorflow as tf
-import re
 
 tokenizer = SelfTokenizer(vocab_file="vocab.json")
 model = TFBlenderbotSmallForConditionalGeneration.from_pretrained("blenderbot-0.1-0.98")
