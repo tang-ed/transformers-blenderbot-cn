@@ -1,59 +1,45 @@
-from transformers import TFBlenderbotSmallModel, BlenderbotSmallConfig, BlenderbotSmallTokenizer
-import numpy as np
+from tokenizer import SelfTokenizer
+from BlenderbotSmall import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallConfig
 import tensorflow as tf
-from tensorflow import keras
+import re
 
-config = BlenderbotSmallConfig.from_json_file("config.json")
+tokenizer = SelfTokenizer(vocab_file="vocab.json")
+model = TFBlenderbotSmallForConditionalGeneration.from_pretrained("blenderbot-0.1-0.98")
+# model.from_pretrained("blenderbot-0.1-0.98")
+encoder = model.get_encoder()
+
+def test_model(sentence):
 
 
-blen_model = TFBlenderbotSmallModel(config=config)
+    input_data = tokenizer.encoder([sentence], add_special_tokens=True, return_tensor="tf")
 
-npzfile = np.load('train_data.npz')
-inputs = npzfile['arr_0']
-outputs = npzfile['arr_1']
-
-inp_shape = inputs.shape[1]
-out_shape = outputs.shape[1]
-
-def models():
-    inp = keras.layers.Input(shape=[None], dtype="int64")
-    de_out = keras.layers.Input(shape=[None], dtype="int64")
-    inp_mask = keras.layers.Input(shape=[None], dtype="int32")
-    out_mask = keras.layers.Input(shape=[None], dtype="int32")
-    out = blen_model(input_ids=inp, decoder_input_ids=de_out, attention_mask=inp_mask, decoder_attention_mask=out_mask, training=True)[0]
-    logits = keras.layers.Dense(config.vocab_size)(out)
-
-    return keras.models.Model(inputs=[inp, de_out, inp_mask, out_mask], outputs=logits), blen_model
-
-def test_model():
-    model, _ = models()
-    model.load_weights("models/tf_model.h5")
-    tokenizer = BlenderbotSmallTokenizer(vocab_file="vocab.json", merges_file="merges.txt")
-    input_data = tokenizer(["你 觉 得 大 学 生 应 该 是 什 么 样 子 的 。"], return_tensors="tf")
-    output_ids = tf.expand_dims(1, 0)[None, :]
-    output_act = tf.expand_dims(1, 0)[None, :]
     input_ids = input_data["input_ids"]
-    input_act = input_data["attention_mask"]
+    att = input_data["attention_mask"]
 
-    for i in range(127):
-        predictions = model([input_ids, output_ids, input_act, output_act], training=False)
+    encoder_out = encoder(input_ids=input_ids, attention_mask=att)
+    decoder_inp = tf.ones((1, 1), dtype="int64")
+
+    for i in range(50):
+        predictions = model(input_ids = input_ids, decoder_input_ids = decoder_inp, encoder_outputs=encoder_out, attention_mask=att)[0]
 
         predictions = predictions[:, -1:, :]
-        predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
+        predicted_id = tf.cast(tf.argmax(predictions, axis=-1), "int64")
 
-        if tf.equal(predicted_id[0].numpy(), [2]):
+        if tf.equal(predicted_id[0], [2]):
             break
 
-        output_ids = tf.concat([output_ids, predicted_id], axis=-1)
-
-    print("".join(tokenizer.batch_decode(tf.squeeze(output_ids, axis=0)[1:])))
-
-
-
+        decoder_inp = tf.concat([decoder_inp, predicted_id], axis=-1)
+    decoder_inp = tf.squeeze(decoder_inp, axis=0)
+    result = "".join(tokenizer.decoder(decoder_inp)[0])
+    return result
 
 
-
+def main(out=""):
+    while True:
+        sentence = str(input("唐恩达："))
+        out = test_model(sentence)
+        print("唐小书：{}".format(out))
 
 
 if __name__ == '__main__':
-    test_model()
+    main()
