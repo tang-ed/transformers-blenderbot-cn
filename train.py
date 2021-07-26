@@ -1,22 +1,81 @@
-from transformers import TFBlenderbotSmallModel, BlenderbotSmallConfig
+from BlenderbotSmall import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallConfig
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
-from config_ import cfg
+from tokenizer import SelfTokenizer
 
 
-config = BlenderbotSmallConfig.from_json_file("config.json")
+tokenizer = SelfTokenizer("vocab.json")
 
 
-blen_model = TFBlenderbotSmallModel(config=config)
+config = BlenderbotSmallConfig.from_json_file("model_file/config_small.json")
 
-npzfile = np.load('train_data.npz')
-inputs = npzfile['arr_0']
-outputs = npzfile['arr_1']
 
-inp_shape = inputs.shape[1]
-out_shape = outputs.shape[1]
+b_model = TFBlenderbotSmallForConditionalGeneration(config=config)
 
+
+inp = tokenizer.encoder(["你好啊，我叫唐小书。"], return_tensor="tf")
+lab = tokenizer.encoder(["唐小书，你好，我叫唐恩达，是来自中国，你也哪里人呢？"], return_tensor="tf")
+model_inp = {
+    "input_ids":inp["input_ids"],
+    "attention_mask":inp["attention_mask"],
+    "decoder_input_ids":lab["input_ids"]
+}
+
+b_model(model_inp)
+
+
+b_model.summary()
+
+def compute_loss(labels, logits):
+    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction=tf.keras.losses.Reduction.NONE
+    )
+    active_loss = tf.not_equal(tf.reshape(labels, (-1,)), 0)
+    reduced_logits = tf.boolean_mask(tf.reshape(logits, (-1, logits.shape[2])), active_loss)
+    labels = tf.boolean_mask(tf.reshape(labels, (-1,)), active_loss)
+    return loss_fn(labels, reduced_logits)
+
+def accuracy(y_true, y_pred):
+
+    active_loss = tf.not_equal(tf.reshape(y_true, (-1,)), 0)
+    reduced_logits = tf.boolean_mask(tf.reshape(y_pred, (-1, y_pred.shape[2])), active_loss)
+    labels = tf.boolean_mask(tf.reshape(y_true, (-1,)), active_loss)
+    return tf.keras.metrics.sparse_categorical_accuracy(labels, reduced_logits)
+
+def create_inputs_labels(path, size=None):
+    with open(path, "r", encoding="utf-8") as f:
+        data = f.readlines()
+
+    q = []
+    a = []
+    data = [data[i][:-1] for i in range(len(data))]
+
+    for n in data:
+        if n == "":
+            continue
+        q_len = len(q)
+        a_len = len(a)
+        if q_len == a_len:
+            q.append(n)
+        else:
+            a.append(n)
+
+    inputs = tokenizer.encoder(q, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=150)
+    labels = tokenizer.encoder(a, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=150)
+    if size:
+        return {
+            "input_ids": inputs["input_ids"][:size],
+            "attention_mask": inputs["attention_mask"][:size],
+            "decoder_input_ids": labels["input_ids"][:size],
+            "decoder_attention_mask": labels["attention_mask"][:size],
+        }
+    else:
+        return {
+            "input_ids":inputs["input_ids"],
+            "attention_mask":inputs["attention_mask"],
+            "decoder_input_ids":labels["input_ids"],
+            "decoder_attention_mask":labels["attention_mask"],
+        }
 
 
 class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -30,44 +89,58 @@ class NaturalExpDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __call__(self, step):
         return self.initial_learning_rate * tf.math.exp(-self.decay_rate * (step / self.decay_steps))
 
-def models():
-    inp = keras.layers.Input(shape=[inp_shape], dtype="int64")
-    de_out = keras.layers.Input(shape=[out_shape-1], dtype="int64")
-    inp_mask = keras.layers.Input(shape=[inp_shape], dtype="int32")
-    out_mask = keras.layers.Input(shape=[out_shape-1], dtype="int32")
-    out = blen_model(input_ids=inp, decoder_input_ids=de_out, attention_mask=inp_mask, decoder_attention_mask=out_mask, training=True)[0]
-    logits = keras.layers.Dense(config.vocab_size)(out)
+class Blenderbot(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.b_model = b_model
 
-    return keras.models.Model(inputs=[inp, de_out, inp_mask, out_mask], outputs=logits), blen_model
+    def get_b_model(self):
+        return self.b_model
 
+    def call(self, input_ids=None,
+        attention_mask=None,
+        decoder_input_ids=None,
+        decoder_attention_mask=None,
+        training=None, **kwargs):
+
+        lm_logits = self.b_model(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, training=training).logits
+
+        return lm_logits
 
 def train():
+    model = Blenderbot()
+    batch_size = 12
+    epoch = 100
+
+    inputs = create_inputs_labels("data/train_data.txt", 5000)
 
     dataset = ({
-            'input_1': inputs,
-            'input_2': outputs[:, :-1],
-            'input_3': np.array(inputs > 0, dtype="int32"),
-            'input_4': np.array(outputs[:, :-1] > 0, dtype="int32"),
-            }, outputs[:, 1:])
+            'input_ids': inputs["input_ids"],
+            'decoder_input_ids': inputs["decoder_input_ids"][:, :-1],
+            'attention_mask': inputs["attention_mask"],
+            'decoder_attention_mask': inputs["decoder_attention_mask"][:, :-1],
+            }, inputs["decoder_input_ids"][:, 1:])
 
     train_dataset = tf.data.Dataset.from_tensor_slices(dataset)
-    train_dataset = train_dataset.shuffle(2000).batch(cfg.batch_size)
+    train_dataset = train_dataset.shuffle(1000).batch(batch_size)
 
-    total_steps = inputs.shape[0] // cfg.batch_size * cfg.epoch
+    total_steps = inputs["input_ids"].shape[0] // batch_size * epoch
     print("总步数：", total_steps)
-    natural_exp_decay = NaturalExpDecay(initial_learning_rate=cfg.lr_rate,
+    natural_exp_decay = NaturalExpDecay(initial_learning_rate=4e-5,
                                         decay_steps=total_steps,
                                         decay_rate=1e-6)
 
-    optimizer = keras.optimizers.Adam(natural_exp_decay)
-    model, b_model = models()
-    model.compile(optimizer=optimizer, loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE), metrics=["accuracy"])
-    model.summary()
+    optimizer = tf.keras.optimizers.Adam(natural_exp_decay)
 
+    # model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE), metrics=["accuracy"])
+    model.compile(optimizer=optimizer, loss=compute_loss, metrics=accuracy)
+    # model.summary()
 
-    model.fit(train_dataset, epochs=cfg.epoch)
-    model.save_weights("tf_model.h5")
-    blen_model.save_pretrained("blen_model")
+    train_call = tf.keras.callbacks.ModelCheckpoint("models.h5", monitor='loss', verbose=0, save_best_only=False,
+                                                 save_weights_only=True, mode='auto', period=3)
+
+    model.fit(train_dataset, epochs=epoch, callbacks=[train_call])
+
 
 
 if __name__ == '__main__':
