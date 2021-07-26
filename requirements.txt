@@ -1,6 +1,0 @@
-transformers==4.2.1
-tqdm
-numpy
-tensorflow==2.4.0
-easydict
-torch==1.7.1
