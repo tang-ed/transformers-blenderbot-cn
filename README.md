@@ -28,3 +28,7 @@ https://huggingface.co/transformers/
 https://huggingface.co/transformers/_modules/transformers/models/blenderbot_small/modeling_tf_blenderbot_small.html#TFBlenderbotSmallModel
 
 # 两千个数据样本进行了30个epoch的训练，测试图在image文件中。loss最终下降到了0.04左右。
+
+
+# Google-colab 训练
+https://colab.research.google.com/drive/1j6EdS0fLIqqQT0Gg-mGk6vLvqV-h4q_N?usp=sharing
