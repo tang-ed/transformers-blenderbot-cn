@@ -33,12 +33,23 @@ def test_model(sentence):
     return result
 
 
-def main(out=""):
+def main(out="", long_dialogue=False, dialogue_num=2):
+    sentence_ls = []
     while True:
         sentence = str(input("唐恩达："))
-        out = test_model(sentence)
+        if long_dialogue:
+            if len(sentence_ls) == 0:
+                inp = sentence
+            else:
+                if len(dialogue_num) > dialogue_num:
+                    inp = "|".join(sentence_ls[-dialogue_num:])
+                else:
+                    inp = "|".join(sentence_ls)
+        else:
+            inp = sentence
+        out = test_model(inp)
         print("唐小书：{}".format(out))
-
+        sentence_ls.extend([sentence, out])
 
 if __name__ == '__main__':
     main()
