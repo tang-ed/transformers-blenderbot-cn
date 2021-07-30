@@ -5,16 +5,12 @@ from tokenizer import SelfTokenizer
 
 
 tokenizer = SelfTokenizer("vocab.json")
-
-
 config = BlenderbotSmallConfig.from_json_file("model_file/config_small.json")
-
-
 b_model = TFBlenderbotSmallForConditionalGeneration(config=config)
-
 
 inp = tokenizer.encoder(["你好啊，我叫唐小书。"], return_tensor="tf")
 lab = tokenizer.encoder(["唐小书，你好，我叫唐恩达，是来自中国，你也哪里人呢？"], return_tensor="tf")
+
 model_inp = {
     "input_ids":inp["input_ids"],
     "attention_mask":inp["attention_mask"],
@@ -22,8 +18,6 @@ model_inp = {
 }
 
 b_model(model_inp)
-
-
 b_model.summary()
 
 def compute_loss(labels, logits):
@@ -36,32 +30,63 @@ def compute_loss(labels, logits):
     return loss_fn(labels, reduced_logits)
 
 def accuracy(y_true, y_pred):
-
     active_loss = tf.not_equal(tf.reshape(y_true, (-1,)), 0)
     reduced_logits = tf.boolean_mask(tf.reshape(y_pred, (-1, y_pred.shape[2])), active_loss)
     labels = tf.boolean_mask(tf.reshape(y_true, (-1,)), active_loss)
     return tf.keras.metrics.sparse_categorical_accuracy(labels, reduced_logits)
 
-def create_inputs_labels(path, size=None):
+def create_inputs_labels(path, size=None, long_dialogue=False, dialogue_num=2, max_len=None):
     with open(path, "r", encoding="utf-8") as f:
         data = f.readlines()
 
     q = []
     a = []
+    sentence = []
     data = [data[i][:-1] for i in range(len(data))]
 
-    for n in data:
-        if n == "":
-            continue
-        q_len = len(q)
-        a_len = len(a)
-        if q_len == a_len:
-            q.append(n)
-        else:
-            a.append(n)
+    if  long_dialogue:
+        for n in data:
+            if n == "":
+                sentence = []
+                continue
 
-    inputs = tokenizer.encoder(q, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=150)
-    labels = tokenizer.encoder(a, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=150)
+            if len(sentence) > dialogue_num:
+                sentence.pop(0)
+                text = ""
+                for i in range(dialogue_num):
+                    if i == dialogue_num-1:
+                        text += sentence[i]
+                    else:
+                        text += sentence[i]+"|"
+                q.append(text)
+                a.append(n)
+
+            else:
+                if len(sentence) == 0:
+                    q.append(n)
+                elif len(sentence) == 1:
+                    a.append(n)
+                else:
+                    q.append(q[-1]+"|"+a[-1])
+                    a.append(n)
+
+            sentence.append(n)
+
+    else:
+        for n in data:
+            if n == "":
+                continue
+
+            q_len = len(q)
+            a_len = len(a)
+
+            if q_len == a_len:
+                q.append(n)
+            else:
+                a.append(n)
+
+    inputs = tokenizer.encoder(q, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=max_len)
+    labels = tokenizer.encoder(a, add_special_tokens=True, padding=True, truncation=True, return_tensor="tf", max_len=max_len)
     if size:
         return {
             "input_ids": inputs["input_ids"][:size],
@@ -112,7 +137,7 @@ def train():
     batch_size = 12
     epoch = 100
 
-    inputs = create_inputs_labels("data/train_data.txt", 5000)
+    inputs = create_inputs_labels("data/train_data.txt", 5000, long_dialogue=True, max_len=None)
 
     dataset = ({
             'input_ids': inputs["input_ids"],
