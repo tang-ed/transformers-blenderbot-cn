@@ -1,3 +1,4 @@
 transformers
 tensorflow
 numpy
+torch
