@@ -133,9 +133,10 @@ class Blenderbot(tf.keras.Model):
         return lm_logits
 
 def train():
-    model = Blenderbot()
+
     batch_size = 12
-    epoch = 100
+    epochs = [30, 30, 30, 10]
+    lr = [2e-5, 1e-5, 8e-6, 6e-6]
 
     inputs = create_inputs_labels("data/train_data.txt", 5000, long_dialogue=True, max_len=None)
 
@@ -149,25 +150,39 @@ def train():
     train_dataset = tf.data.Dataset.from_tensor_slices(dataset)
     train_dataset = train_dataset.shuffle(1000).batch(batch_size)
 
-    total_steps = inputs["input_ids"].shape[0] // batch_size * epoch
-    print("总步数：", total_steps)
-    natural_exp_decay = NaturalExpDecay(initial_learning_rate=4e-5,
-                                        decay_steps=total_steps,
-                                        decay_rate=1e-6)
-
-    optimizer = tf.keras.optimizers.Adam(natural_exp_decay)
-
-    # model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE), metrics=["accuracy"])
-    model.compile(optimizer=optimizer, loss=compute_loss, metrics=accuracy)
-    # model.summary()
-
-    train_call = tf.keras.callbacks.ModelCheckpoint("models.h5", monitor='loss', verbose=0, save_best_only=False,
-                                                 save_weights_only=True, mode='auto', period=3)
-
-    model.fit(train_dataset, epochs=epoch, callbacks=[train_call])
 
 
-    
+
+    for i, (e, l) in enumerate(zip(epochs, lr)):
+        model = Blenderbot()
+        try:
+            model(input_ids=inputs["input_ids"][:2], decoder_input_ids=inputs["decoder_input_ids"][:2])
+
+            model.load_weights("model.h5")
+        except:
+            pass
+
+        total_steps = inputs["input_ids"].shape[0] // batch_size * e
+        print("总步数：", total_steps)
+
+
+        natural_exp_decay = NaturalExpDecay(initial_learning_rate=l,
+                                            decay_steps=total_steps,
+                                            decay_rate=1e-6)
+
+        optimizer = tf.keras.optimizers.Adam(natural_exp_decay)
+
+        # model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE), metrics=["accuracy"])
+        model.compile(optimizer=optimizer, loss=compute_loss, metrics=accuracy)
+        # model.summary()
+
+        train_call = tf.keras.callbacks.ModelCheckpoint("model.h5", monitor='loss', verbose=0, save_best_only=False,
+                                                        save_weights_only=True, mode='auto', period=5)
+
+        model.fit(train_dataset, epochs=e, callbacks=[train_call])
+        model.save_weights("model.h5")
+
+
 
 if __name__ == '__main__':
     train()
