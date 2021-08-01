@@ -1,4 +1,4 @@
-from Blenderbot import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallConfig
+from BlenderbotSmall import TFBlenderbotSmallForConditionalGeneration, BlenderbotSmallConfig
 import numpy as np
 import tensorflow as tf
 from tokenizer import SelfTokenizer
@@ -41,7 +41,7 @@ class Blenderbot(tf.keras.Model):
         decoder_attention_mask=None,
         training=None, **kwargs):
 
-        lm_logits = self.b_model(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, training=training)[0]
+        lm_logits = self.b_model(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask, training=training).logits
 
         return lm_logits
 
@@ -50,8 +50,8 @@ model = Blenderbot()
 
 model(**model_inp)
 
-model.load_weights("models_v2.h5")
+model.load_weights("model.h5")
 
 blenderbot = model.get_b_model()
 
-blenderbot.save_pretrained("blenderbot-0.1-0.98")
+blenderbot.save_pretrained("blenderbot-model")
