@@ -3,8 +3,7 @@ from BlenderbotSmall import TFBlenderbotSmallForConditionalGeneration, Blenderbo
 import tensorflow as tf
 
 tokenizer = SelfTokenizer(vocab_file="vocab.json")
-model = TFBlenderbotSmallForConditionalGeneration.from_pretrained("blenderbot-0.1-0.98")
-# model.from_pretrained("blenderbot-0.1-0.98")
+model = TFBlenderbotSmallForConditionalGeneration.from_pretrained("blenderbot-model")
 encoder = model.get_encoder()
 
 def test_model(sentence):
@@ -41,10 +40,11 @@ def main(out="", long_dialogue=False, dialogue_num=2):
             if len(sentence_ls) == 0:
                 inp = sentence
             else:
-                if len(dialogue_num) > dialogue_num:
-                    inp = "|".join(sentence_ls[-dialogue_num:])
+                if len(sentence_ls)+1 > dialogue_num:
+                    inp = "|".join(sentence_ls[-dialogue_num+1:]+[sentence])
                 else:
-                    inp = "|".join(sentence_ls)
+                    inp = "|".join(sentence_ls+[sentence])
+
         else:
             inp = sentence
         out = test_model(inp)
@@ -52,4 +52,4 @@ def main(out="", long_dialogue=False, dialogue_num=2):
         sentence_ls.extend([sentence, out])
 
 if __name__ == '__main__':
-    main()
+    main(long_dialogue=True)
