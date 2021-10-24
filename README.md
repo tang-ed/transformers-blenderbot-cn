@@ -7,10 +7,6 @@ pip3 install -r requirements.txt
 
 2.python3 train.py
 
-## 测试步骤
-1.python3 save_trans_model.py 生成BlenderbotSmall专属的权重文件
-
-2.python3 test.py
 
 ## 注意：
 非训练是将config_small.json中的use_cache改为true
