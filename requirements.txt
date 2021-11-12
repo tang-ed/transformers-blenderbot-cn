@@ -1,4 +1,4 @@
-transformers
+transformers==4.11.0
 tensorflow
 numpy
 torch
